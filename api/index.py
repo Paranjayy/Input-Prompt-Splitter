@@ -19,6 +19,7 @@ def index():
     prompt = ""
     split_length = ""
     file_data = []
+    num_parts = 0
     
     redis_client.incr("visit_counter")
     visit_count = int(redis_client.get("visit_counter"))
@@ -27,11 +28,11 @@ def index():
         prompt = request.form["prompt"]
         split_length = int(request.form["split_length"])
 
-        file_data = split_prompt(prompt, split_length)
+        file_data, num_parts = split_prompt(prompt, split_length)
         
     hash_value = generate_random_hash(8)
     
-    return render_template("index.html", prompt=prompt, split_length=split_length, file_data=file_data, hash=hash_value, visit_count=visit_count)
+    return render_template("index.html", prompt=prompt, split_length=split_length, num_parts=num_parts, file_data=file_data, hash=hash_value, visit_count=visit_count)
             
 def split_prompt(text, split_length):
     if split_length <= 0:
@@ -56,7 +57,7 @@ def split_prompt(text, split_length):
             'content': content
         })
 
-    return file_data
+    return file_data, num_parts
 
 def generate_random_hash(length):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
