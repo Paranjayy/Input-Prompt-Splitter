@@ -16,6 +16,7 @@ type SessionRec = {
   encoding: string
   size: number
   boundary: Boundary
+  overlap: number
   createdAt: number
 }
 
@@ -29,6 +30,7 @@ function App() {
   const [prepend, setPrepend] = useState(localStorage.getItem('tpl_prepend') || '')
   const [append, setAppend] = useState(localStorage.getItem('tpl_append') || '')
   const [boundary, setBoundary] = useState<Boundary>('none')
+  const [overlap, setOverlap] = useState(0)
   const builtinPresets: Preset[] = [
     { id: 'gpt4o-chat-8k', name: 'GPT‑4o (Chat) 8k', size: 8000 },
     { id: 'openai-32k', name: 'OpenAI 32k', size: 32000 },
@@ -93,11 +95,12 @@ function App() {
   const estimatedParts = useMemo(() => {
     const n = unit === 'tokens' ? tokenCount : unit === 'chars' ? text.trim().length : wordCount
     if (!n || !size) return 0
-    return Math.ceil(n / Math.max(1, size))
-  }, [unit, tokenCount, text, size])
+    const effectiveSize = Math.max(1, size - (boundary === 'none' ? overlap : 0))
+    return Math.ceil(n / effectiveSize)
+  }, [unit, tokenCount, text, size, overlap, boundary])
 
   const doSplit = async () => {
-    const { data } = await axios.post('/api/split', { text, unit, size, encoding, boundary })
+    const { data } = await axios.post('/api/split', { text, unit, size, encoding, boundary, overlap })
     const transformed = (data.parts as { name: string; content: string }[]).map((p) => ({
       name: p.name,
       content: `${prepend ? prepend + '\n' : ''}${p.content}${append ? '\n' + append : ''}`,
@@ -113,6 +116,7 @@ function App() {
       encoding,
       size,
       boundary,
+      overlap,
       createdAt: Date.now(),
     }
     setHistory((h) => [rec, ...h].slice(0, 50))
@@ -157,6 +161,7 @@ function App() {
     setEncoding(rec.encoding)
     setSize(rec.size)
     setBoundary(rec.boundary)
+    setOverlap(rec.overlap || 0)
     setParts([])
   }
 
@@ -217,6 +222,19 @@ function App() {
                 <option value="paragraph">paragraph</option>
               </select>
             </label>
+            <label title="Overlap between chunks for context continuity">
+              Overlap
+              <input
+                type="range"
+                min={0}
+                max={Math.min(50, size - 1)}
+                value={overlap}
+                onChange={(e) => setOverlap(parseInt(e.target.value, 10))}
+                disabled={boundary !== 'none'}
+                style={{ marginLeft: 6, width: 80 }}
+              />
+              <span style={{ marginLeft: 4, fontSize: '0.9em' }}>{overlap}</span>
+            </label>
             <button disabled={!text.trim() || !size} onClick={doSplit} title="Generate parts using the selected options">Split</button>
           </div>
 
@@ -238,7 +256,7 @@ function App() {
             </div>
           )}
         </div>
-        <div>
+      <div>
           <div style={{ padding: 12, border: '1px solid #333', borderRadius: 8 }}>
             <h3 style={{ marginTop: 0 }}>Custom presets</h3>
             <div style={{ display: 'grid', gap: 8 }}>
@@ -246,7 +264,7 @@ function App() {
               <input type="number" placeholder="Size (tokens)" value={newPresetSize} onChange={(e) => setNewPresetSize(parseInt(e.target.value || '0', 10))} />
               <button onClick={addCustomPreset}>Save preset</button>
             </div>
-          </div>
+      </div>
           <div style={{ height: 16 }} />
           <div style={{ padding: 12, border: '1px solid #333', borderRadius: 8 }}>
             <h3 style={{ marginTop: 0 }}>History</h3>
@@ -256,7 +274,7 @@ function App() {
                 <div key={h.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <button onClick={() => loadSession(h.id)} style={{ flex: 1, textAlign: 'left' }}>
                     {new Date(h.createdAt).toLocaleString()} · {h.title}
-                  </button>
+        </button>
                   <button onClick={() => deleteSession(h.id)}>✕</button>
                 </div>
               ))}
