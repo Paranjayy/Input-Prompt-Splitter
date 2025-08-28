@@ -57,6 +57,15 @@ document.getElementById("prompt").addEventListener("input", function () {
     encodingSelect.addEventListener('change', updatePromptTokenCount);
   }
 
+  // Recompute when overlap changes
+  const overlapEl2 = document.getElementById('overlap');
+  if (overlapEl2) {
+    overlapEl2.addEventListener('input', () => {
+      updateSplitButtonStatus();
+      updatePromptTokenCount();
+    });
+  }
+
   function updateSplitButtonStatus() {
     const promptField = document.getElementById('prompt');
     const splitLength = document.getElementById('split_length');
@@ -64,6 +73,9 @@ document.getElementById("prompt").addEventListener("input", function () {
     const mode = document.querySelector('input[name="mode"]:checked')?.value || 'chars';
     const promptLength = promptField.value.trim().length;
     const splitLengthValue = parseInt(splitLength.value);
+    const overlapEl = document.getElementById('overlap');
+    const overlapValue = Math.max(0, parseInt(overlapEl?.value || '0'));
+    const effectiveSize = isNaN(splitLengthValue) ? 0 : Math.max(1, splitLengthValue - overlapValue);
 
     if (promptLength === 0) {
         splitBtn.setAttribute('disabled', 'disabled');
@@ -81,7 +93,7 @@ document.getElementById("prompt").addEventListener("input", function () {
         splitBtn.removeAttribute('disabled');
         splitBtn.classList.remove('disabled');
         if (mode === 'chars') {
-          splitBtn.textContent = `Split into ${Math.ceil(promptLength / splitLengthValue)} parts`;
+          splitBtn.textContent = `Split into ${Math.ceil(promptLength / effectiveSize)} parts`;
         } else {
           const tokenCount = parseInt(document.getElementById('prompt-token-count').textContent) || 0;
           if (tokenCount === 0) {
@@ -89,7 +101,7 @@ document.getElementById("prompt").addEventListener("input", function () {
             splitBtn.setAttribute('disabled', 'disabled');
             splitBtn.classList.add('disabled');
           } else {
-            splitBtn.textContent = `Split into ${Math.ceil(tokenCount / splitLengthValue)} parts`;
+            splitBtn.textContent = `Split into ${Math.ceil(tokenCount / effectiveSize)} parts`;
           }
         }
     }

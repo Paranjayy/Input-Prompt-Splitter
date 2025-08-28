@@ -442,6 +442,7 @@ function App() {
 
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
             <label title="Metric to base splitting on"><input type="radio" checked={unit === 'chars'} onChange={() => setUnit('chars')} /> Characters</label>
+            <label title="Split by number of words (whitespace-delimited)"><input type="radio" checked={unit === 'words'} onChange={() => setUnit('words')} /> Words</label>
             <label title="Recommended. Uses tokenizer to count input tokens"><input type="radio" checked={unit === 'tokens'} onChange={() => setUnit('tokens')} /> Tokens</label>
             <label title="Tokenizer family (affects token counting)">
               Tokenizer

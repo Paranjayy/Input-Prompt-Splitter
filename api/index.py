@@ -39,6 +39,7 @@ def index():
     file_data = []
     mode = request.form.get("mode", "chars") if request.method == "POST" else "chars"
     encoding_name = request.form.get("encoding", "cl100k_base") if request.method == "POST" else "cl100k_base"
+    overlap = 0
 
     # Visit counter (safe without Redis)
     try:
@@ -53,11 +54,15 @@ def index():
     if request.method == "POST":
         prompt = request.form["prompt"]
         split_length = int(request.form["split_length"])
+        try:
+            overlap = int(request.form.get("overlap", 0))
+        except Exception:
+            overlap = 0
 
         if mode == "tokens":
-            file_data = split_prompt_by_tokens(prompt, split_length, encoding_name)
+            file_data = split_prompt_by_tokens(prompt, split_length, encoding_name, overlap)
         else:
-            file_data = split_prompt(prompt, split_length)
+            file_data = split_prompt(prompt, split_length, overlap)
 
     hash_value = generate_random_hash(8)
 
@@ -70,6 +75,7 @@ def index():
         visit_count=visit_count,
         mode=mode,
         encoding_name=encoding_name,
+        overlap=overlap,
     )
             
 def split_prompt(text, split_length, overlap=0):
