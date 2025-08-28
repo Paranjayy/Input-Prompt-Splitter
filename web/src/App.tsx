@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import axios from 'axios'
 import JSZip from 'jszip'
-import { get_encoding, encoding_for_model } from '@dqbd/tiktoken'
+import { get_encoding } from '@dqbd/tiktoken'
+import type { TiktokenEncoding } from '@dqbd/tiktoken'
 
 type Unit = 'tokens' | 'chars' | 'words'
 type Boundary = 'none' | 'sentence' | 'paragraph'
@@ -68,12 +69,15 @@ function App() {
         const { data } = await axios.post('/api/count_tokens', { text, encoding }, { signal: controller.signal })
         setTokenCount(data.count ?? 0)
       } catch {
-        // Browser-side fallback tokenizer
+        // Browser-side fallback tokenizer using @dqbd/tiktoken
         try {
-          let enc
-          try { enc = encoding_for_model(encoding as any) } catch { enc = get_encoding(encoding) }
+          // Map unsupported encodings to a supported one for the type system
+          const encName: TiktokenEncoding = (encoding === 'o200k_base' ? 'cl100k_base' : encoding) as TiktokenEncoding
+          const enc = get_encoding(encName)
           const tokens = enc.encode(text)
           setTokenCount(tokens.length)
+          // free is available in wasm build; guard just in case
+          // @ts-ignore
           enc.free && enc.free()
         } catch {
           setTokenCount(0)
