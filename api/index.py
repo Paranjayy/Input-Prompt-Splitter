@@ -258,7 +258,7 @@ def api_split():
     try:
         data = request.get_json(force=True, silent=True) or {}
         text = data.get('text', '')
-        unit = data.get('unit', 'tokens')  # 'tokens' | 'chars'
+        unit = data.get('unit', 'tokens')  # 'tokens' | 'chars' | 'words'
         size = int(data.get('size', 1000))
         encoding_or_model_name = data.get('encoding', 'cl100k_base')
         boundary = data.get('boundary', 'none')  # 'none' | 'sentence' | 'paragraph'
@@ -270,12 +270,15 @@ def api_split():
             else:
                 # For now, boundary splitting doesn't support overlap
                 parts = split_prompt_tokens_with_boundary(text, size, encoding_or_model_name, boundary)
-        else:
+        elif unit == 'chars':
             if boundary == 'none':
                 parts = split_prompt(text, size, overlap)
             else:
                 # For now, boundary splitting doesn't support overlap
                 parts = split_prompt_chars_with_boundary(text, size, boundary)
+        else:
+            # words
+            parts = split_prompt_words_with_boundary(text, size, boundary)
         return jsonify({
             'parts': parts,
             'count': {
@@ -379,6 +382,58 @@ def split_prompt_tokens_with_boundary(text: str, max_tokens: int, encoding_or_mo
     num_parts = len(parts)
     file_data = []
     for idx, chunk_text in enumerate(parts):
+        if idx == num_parts - 1:
+            content = f'[START PART {idx + 1}/{num_parts}]\n' + chunk_text + f'\n[END PART {idx + 1}/{num_parts}]'
+            content += '\nALL PARTS SENT. Now you can continue processing the request.'
+        else:
+            content = f'Do not answer yet. This is just another part of the text I want to send you. Just receive and acknowledge as "Part {idx + 1}/{num_parts} received" and wait for the next part.\n[START PART {idx + 1}/{num_parts}]\n' + chunk_text + f'\n[END PART {idx + 1}/{num_parts}]'
+            content += f'\nRemember not answering yet. Just acknowledge you received this part with the message "Part {idx + 1}/{num_parts} received" and wait for the next part.'
+        file_data.append({'name': f'split_{str(idx + 1).zfill(3)}_of_{str(num_parts).zfill(3)}.txt', 'content': content})
+
+    return file_data
+
+
+def split_prompt_words_with_boundary(text: str, max_words: int, boundary: str):
+    if max_words <= 0:
+        raise ValueError("Max words must be greater than 0.")
+    if not text:
+        return []
+
+    tokens = list(re.finditer(r"\S+\s*", text))
+    i = 0
+    n = len(tokens)
+    parts_text = []
+
+    while i < n:
+        window_end_idx = min(i + max_words, n)
+        start_char = tokens[i].start()
+        end_char_hint = tokens[window_end_idx - 1].end()
+        window_text = text[start_char:end_char_hint]
+
+        if boundary == 'none':
+            advance = window_end_idx - i
+        else:
+            cut_offset = _find_last_boundary_index(window_text, boundary)
+            if cut_offset == -1 or cut_offset == 0:
+                advance = window_end_idx - i
+            else:
+                cut_char = start_char + cut_offset
+                advance = 0
+                for j in range(i, window_end_idx):
+                    if tokens[j].end() <= cut_char:
+                        advance += 1
+                    else:
+                        break
+                if advance == 0:
+                    advance = 1
+
+        chunk_end_char = tokens[i + advance - 1].end()
+        parts_text.append(text[start_char:chunk_end_char])
+        i += advance
+
+    num_parts = len(parts_text)
+    file_data = []
+    for idx, chunk_text in enumerate(parts_text):
         if idx == num_parts - 1:
             content = f'[START PART {idx + 1}/{num_parts}]\n' + chunk_text + f'\n[END PART {idx + 1}/{num_parts}]'
             content += '\nALL PARTS SENT. Now you can continue processing the request.'
