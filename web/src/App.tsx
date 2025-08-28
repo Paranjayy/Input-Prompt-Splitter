@@ -8,6 +8,14 @@ import type { TiktokenEncoding } from '@dqbd/tiktoken'
 type Unit = 'tokens' | 'chars' | 'words'
 type Boundary = 'none' | 'sentence' | 'paragraph'
 type Preset = { id: string; name: string; size: number }
+type TemplatePreset = {
+  id: string
+  name: string
+  description: string
+  prepend: string
+  append: string
+  category: string
+}
 type SessionRec = {
   id: string
   title: string
@@ -31,6 +39,83 @@ function App() {
   const [append, setAppend] = useState(localStorage.getItem('tpl_append') || '')
   const [boundary, setBoundary] = useState<Boundary>('none')
   const [overlap, setOverlap] = useState(0)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+
+  const templatePresets: TemplatePreset[] = [
+    {
+      id: 'qa-basic',
+      name: 'Q&A Basic',
+      description: 'Simple question and answer format',
+      category: 'QA',
+      prepend: 'Please answer the following question based on the provided context:\n\n',
+      append: '\n\nPlease provide a clear and concise answer.'
+    },
+    {
+      id: 'qa-detailed',
+      name: 'Q&A Detailed',
+      description: 'Detailed analysis and explanation',
+      category: 'QA',
+      prepend: 'Please analyze and answer the following question using the provided context. Include relevant details and explanations:\n\n',
+      append: '\n\nProvide a comprehensive answer with supporting evidence from the context.'
+    },
+    {
+      id: 'summarize-concise',
+      name: 'Summarize Concise',
+      description: 'Create a brief summary',
+      category: 'Summarization',
+      prepend: 'Please provide a concise summary of the following text:\n\n',
+      append: '\n\nKeep the summary under 100 words and focus on the main points.'
+    },
+    {
+      id: 'summarize-detailed',
+      name: 'Summarize Detailed',
+      description: 'Create a comprehensive summary with key points',
+      category: 'Summarization',
+      prepend: 'Please create a detailed summary of the following text, including main themes and key points:\n\n',
+      append: '\n\nStructure the summary with bullet points for clarity.'
+    },
+    {
+      id: 'translate-formal',
+      name: 'Translate Formal',
+      description: 'Formal/academic translation',
+      category: 'Translation',
+      prepend: 'Please translate the following text into [TARGET_LANGUAGE] using formal academic language:\n\n',
+      append: '\n\nMaintain the original meaning and tone while using appropriate formal terminology.'
+    },
+    {
+      id: 'translate-casual',
+      name: 'Translate Casual',
+      description: 'Casual/natural translation',
+      category: 'Translation',
+      prepend: 'Please translate the following text into [TARGET_LANGUAGE] in a natural, conversational way:\n\n',
+      append: '\n\nMake it sound like it was originally written in the target language.'
+    },
+    {
+      id: 'code-review',
+      name: 'Code Review',
+      description: 'Review and analyze code',
+      category: 'Coding',
+      prepend: 'Please review the following code and provide feedback:\n\n```code\n',
+      append: '\n```\n\nPlease analyze: code quality, potential bugs, performance, readability, and suggest improvements.'
+    },
+    {
+      id: 'code-explain',
+      name: 'Code Explanation',
+      description: 'Explain what the code does',
+      category: 'Coding',
+      prepend: 'Please explain what the following code does:\n\n```code\n',
+      append: '\n```\n\nBreak down the functionality step by step in simple terms.'
+    },
+    {
+      id: 'code-optimize',
+      name: 'Code Optimization',
+      description: 'Suggest code optimizations',
+      category: 'Coding',
+      prepend: 'Please analyze the following code and suggest optimizations:\n\n```code\n',
+      append: '\n```\n\nFocus on performance improvements, memory usage, and algorithmic efficiency.'
+    }
+  ]
+
   const builtinPresets: Preset[] = [
     { id: 'gpt4o-chat-8k', name: 'GPT‑4o (Chat) 8k', size: 8000 },
     { id: 'openai-32k', name: 'OpenAI 32k', size: 32000 },
@@ -169,6 +254,15 @@ function App() {
     setHistory((h) => h.filter((r) => r.id !== id))
   }
 
+  const applyTemplatePreset = (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    const template = templatePresets.find((t) => t.id === templateId)
+    if (template) {
+      setPrepend(template.prepend)
+      setAppend(template.append)
+    }
+  }
+
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: 20 }}>
       <h1>Token Slicer</h1>
@@ -240,9 +334,50 @@ function App() {
 
           <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
             <label>Prepend to each part</label>
-            <textarea value={prepend} onChange={(e) => setPrepend(e.target.value)} rows={3} style={{ width: '100%' }} />
+            <textarea
+              value={prepend}
+              onChange={(e) => {
+                setPrepend(e.target.value)
+                setSelectedTemplateId('')
+              }}
+              rows={3}
+              style={{ width: '100%' }}
+            />
             <label>Append to each part</label>
-            <textarea value={append} onChange={(e) => setAppend(e.target.value)} rows={3} style={{ width: '100%' }} />
+            <textarea
+              value={append}
+              onChange={(e) => {
+                setAppend(e.target.value)
+                setSelectedTemplateId('')
+              }}
+              rows={3}
+              style={{ width: '100%' }}
+            />
+
+            <div style={{ marginTop: 12, padding: 12, border: '1px solid #ddd', borderRadius: 8, backgroundColor: '#f9f9f9' }}>
+              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: 8 }}>Template Gallery</label>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => applyTemplatePreset(e.target.value)}
+                  style={{ width: '100%', padding: 8, borderRadius: 4, border: '1px solid #ccc' }}
+                >
+                  <option value="">Select a template...</option>
+                  {templatePresets.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.category}: {template.name}
+                    </option>
+                  ))}
+                </select>
+                {selectedTemplateId && (
+                  <div style={{ fontSize: '0.9em', color: '#666', padding: 8, backgroundColor: '#fff', borderRadius: 4 }}>
+                    <strong>{templatePresets.find(t => t.id === selectedTemplateId)?.name}</strong>
+                    <br />
+                    {templatePresets.find(t => t.id === selectedTemplateId)?.description}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {parts.length > 0 && (
