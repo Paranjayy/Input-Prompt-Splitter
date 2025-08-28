@@ -40,6 +40,7 @@ function App() {
   const [boundary, setBoundary] = useState<Boundary>('none')
   const [overlap, setOverlap] = useState(0)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+  const [isDragOver, setIsDragOver] = useState(false)
 
   const templatePresets: TemplatePreset[] = [
     {
@@ -223,6 +224,59 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  const downloadMarkdown = async () => {
+    const toc: string[] = []
+    const content: string[] = []
+
+    // Add title and metadata
+    content.push('# Token Slicer Export')
+    content.push('')
+    content.push(`**Generated:** ${new Date().toLocaleString()}`)
+    content.push(`**Total Parts:** ${parts.length}`)
+    content.push(`**Unit:** ${unit}`)
+    content.push(`**Max Size:** ${size}`)
+    if (overlap > 0) content.push(`**Overlap:** ${overlap}`)
+    if (boundary !== 'none') content.push(`**Boundary:** ${boundary}`)
+    content.push('')
+
+    // Create Table of Contents
+    content.push('## Table of Contents')
+    content.push('')
+    parts.forEach((_, i) => {
+      const partNum = i + 1
+      toc.push(`${partNum}. [Part ${partNum}](#part-${partNum})`)
+    })
+    content.push(...toc)
+    content.push('')
+
+    // Add each part with proper headers
+    parts.forEach((part, i) => {
+      const partNum = i + 1
+      content.push(`---`)
+      content.push('')
+      content.push(`## Part ${partNum}`)
+      content.push('')
+      // Clean up the part content (remove START/END markers for cleaner Markdown)
+      const cleanContent = part.content
+        .replace(/^\[START PART \d+\/?\d*\]\n/, '')
+        .replace(/\n\[END PART \d+\/?\d*\]$/, '')
+        .replace(/\nALL PARTS SENT\. Now you can continue processing the request\.$/, '')
+        .trim()
+
+      content.push(cleanContent)
+      content.push('')
+    })
+
+    const markdownContent = content.join('\n')
+    const blob = new Blob([markdownContent], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'token-slicer-export.md'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const applyPreset = (id: string) => {
     setSelectedPresetId(id)
     const pr = allPresets.find((p) => p.id === id)
@@ -263,6 +317,58 @@ function App() {
     }
   }
 
+  const handleFileUpload = async (file: File) => {
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ['text/plain', 'text/markdown', 'text/x-markdown']
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(txt|md|markdown)$/i)) {
+      alert('Please upload a .txt or .md file')
+      return
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB')
+      return
+    }
+
+    try {
+      const content = await file.text()
+      setText(content)
+      setParts([]) // Clear previous results
+    } catch (error) {
+      alert('Error reading file: ' + error.message)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) {
+      handleFileUpload(files[0])
+    }
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileUpload(file)
+    }
+  }
+
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: 20 }}>
       <h1>Token Slicer</h1>
@@ -270,13 +376,62 @@ function App() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
         <div>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={10}
-            style={{ width: '100%' }}
-            placeholder="Paste your long text here"
-          />
+          <div style={{ marginBottom: 12 }}>
+            <input
+              type="file"
+              accept=".txt,.md,.markdown"
+              onChange={handleFileInputChange}
+              style={{ marginRight: 12 }}
+            />
+            <span style={{ fontSize: '0.9em', color: '#666' }}>
+              or drag & drop a .txt/.md file below
+            </span>
+          </div>
+
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            style={{
+              position: 'relative',
+              border: isDragOver ? '2px dashed #007bff' : '1px solid #ccc',
+              borderRadius: 4,
+              backgroundColor: isDragOver ? '#f0f8ff' : '#fafafa',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={10}
+              style={{
+                width: '100%',
+                border: 'none',
+                backgroundColor: 'transparent',
+                resize: 'vertical'
+              }}
+              placeholder="Paste your long text here, or drag & drop a .txt/.md file"
+            />
+            {isDragOver && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                color: '#007bff',
+                fontWeight: 'bold',
+                pointerEvents: 'none',
+                borderRadius: 4
+              }}>
+                📄 Drop file here
+              </div>
+            )}
+          </div>
 
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
             <div>Words: {wordCount}</div>
@@ -382,8 +537,11 @@ function App() {
 
           {parts.length > 0 && (
             <div style={{ marginTop: 16 }}>
-              <button onClick={downloadAll}>Download all as ZIP</button>
-              <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                <button onClick={downloadAll}>📦 Download as ZIP</button>
+                <button onClick={downloadMarkdown}>📝 Download as Markdown</button>
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
                 {parts.map((p, i) => (
                   <button key={p.name} onClick={() => copyOne(p.content)}>Copy part {i + 1} / {parts.length}</button>
                 ))}
