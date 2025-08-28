@@ -4,7 +4,7 @@ document.getElementById("prompt").addEventListener("input", function () {
     updatePromptTokenCount();
   });
 
-  document.getElementById('split_length').addEventListener('input', updateSplitButtonStatus);
+  document.getElementById('split_length').addEventListener('input', () => { updateSplitButtonStatus(); updatePromptTokenCount(); });
 
   function copyToClipboard(element) {
     const textArea = document.createElement("textarea");
@@ -106,10 +106,7 @@ document.getElementById("prompt").addEventListener("input", function () {
     const tokenEl = document.getElementById('prompt-token-count');
     if (!tokenEl) return;
     const mode = document.querySelector('input[name="mode"]:checked')?.value || 'chars';
-    if (mode !== 'tokens') {
-      tokenEl.textContent = '0';
-      return;
-    }
+    // Always compute tokens so user can see count even in Characters mode
     const promptField = document.getElementById('prompt');
     const encoding = document.getElementById('encoding')?.value || 'cl100k_base';
     const text = promptField.value || '';

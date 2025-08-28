@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 import random
 import redis
 import string
 import math
+import re
 
 try:
     import tiktoken
@@ -19,6 +21,7 @@ app = Flask(
     template_folder='templates',
     static_folder=os.path.join(os.path.dirname(__file__), '../static')
 )
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Set up Redis client (optional)
 upstash_redis_url = os.environ.get('UPSTASH_REDIS_URL')
@@ -158,6 +161,139 @@ def api_count_tokens():
         return jsonify({"count": token_count})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+
+
+@app.post('/api/split')
+def api_split():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        text = data.get('text', '')
+        unit = data.get('unit', 'tokens')  # 'tokens' | 'chars'
+        size = int(data.get('size', 1000))
+        encoding_or_model_name = data.get('encoding', 'cl100k_base')
+        boundary = data.get('boundary', 'none')  # 'none' | 'sentence' | 'paragraph'
+        if unit == 'tokens':
+            if boundary == 'none':
+                parts = split_prompt_by_tokens(text, size, encoding_or_model_name)
+            else:
+                parts = split_prompt_tokens_with_boundary(text, size, encoding_or_model_name, boundary)
+        else:
+            if boundary == 'none':
+                parts = split_prompt(text, size)
+            else:
+                parts = split_prompt_chars_with_boundary(text, size, boundary)
+        return jsonify({
+            'parts': parts,
+            'count': {
+                'chars': len(text),
+                'tokens': count_tokens(text, encoding_or_model_name)
+            }
+        })
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 400
+
+
+_SENTENCE_BOUNDARY_REGEX = re.compile(r"(?s)(?<=[\.!?])[)\]\"']*(?=\s|\n|$)")
+
+def _find_last_boundary_index(text: str, mode: str) -> int:
+    if not text:
+        return 0
+    if mode == 'paragraph':
+        idx = text.rfind('\n\n')
+        return idx + 2 if idx != -1 else -1
+    if mode == 'sentence':
+        last_pos = -1
+        for m in _SENTENCE_BOUNDARY_REGEX.finditer(text):
+            last_pos = m.end()
+        return last_pos
+    return -1
+
+
+def split_prompt_chars_with_boundary(text: str, max_chars: int, boundary: str):
+    if max_chars <= 0:
+        raise ValueError("Max length must be greater than 0.")
+    if not text:
+        return []
+
+    file_data = []
+    parts_text = []
+    start = 0
+    n = len(text)
+    while start < n:
+        end_hint = min(start + max_chars, n)
+        window = text[start:end_hint]
+        cut = _find_last_boundary_index(window, boundary)
+        if cut == -1 or cut == 0:
+            cut = len(window)
+        chunk = window[:cut]
+        parts_text.append(chunk)
+        start += len(chunk)
+
+    num_parts = len(parts_text)
+    for i, chunk_text in enumerate(parts_text):
+        if i == num_parts - 1:
+            content = f'[START PART {i + 1}/{num_parts}]\n' + chunk_text + f'\n[END PART {i + 1}/{num_parts}]'
+            content += '\nALL PARTS SENT. Now you can continue processing the request.'
+        else:
+            content = f'Do not answer yet. This is just another part of the text I want to send you. Just receive and acknowledge as "Part {i + 1}/{num_parts} received" and wait for the next part.\n[START PART {i + 1}/{num_parts}]\n' + chunk_text + f'\n[END PART {i + 1}/{num_parts}]'
+            content += f'\nRemember not answering yet. Just acknowledge you received this part with the message "Part {i + 1}/{num_parts} received" and wait for the next part.'
+
+        file_data.append({
+            'name': f'split_{str(i + 1).zfill(3)}_of_{str(num_parts).zfill(3)}.txt',
+            'content': content
+        })
+
+    return file_data
+
+
+def split_prompt_tokens_with_boundary(text: str, max_tokens: int, encoding_or_model_name: str, boundary: str):
+    if max_tokens <= 0:
+        raise ValueError("Max tokens must be greater than 0.")
+    if not text:
+        return []
+
+    enc = _get_encoding(encoding_or_model_name)
+    token_ids = enc.encode(text)
+    i = 0
+    n = len(token_ids)
+    parts = []
+
+    while i < n:
+        window_end = min(i + max_tokens, n)
+        window_ids = token_ids[i:window_end]
+        window_text = enc.decode(window_ids)
+        cut_char_pos = _find_last_boundary_index(window_text, boundary)
+        if cut_char_pos == -1 or cut_char_pos == 0:
+            advance = len(window_ids)
+            parts.append(window_text)
+            i += advance
+            continue
+        advance = 0
+        for j in range(1, len(window_ids) + 1):
+            if len(enc.decode(window_ids[:j])) >= cut_char_pos:
+                advance = max(1, j - 1)
+                break
+        if advance == 0:
+            advance = len(window_ids)
+            parts.append(window_text)
+            i += advance
+        else:
+            chunk_text = enc.decode(window_ids[:advance])
+            parts.append(chunk_text)
+            i += advance
+
+    num_parts = len(parts)
+    file_data = []
+    for idx, chunk_text in enumerate(parts):
+        if idx == num_parts - 1:
+            content = f'[START PART {idx + 1}/{num_parts}]\n' + chunk_text + f'\n[END PART {idx + 1}/{num_parts}]'
+            content += '\nALL PARTS SENT. Now you can continue processing the request.'
+        else:
+            content = f'Do not answer yet. This is just another part of the text I want to send you. Just receive and acknowledge as "Part {idx + 1}/{num_parts} received" and wait for the next part.\n[START PART {idx + 1}/{num_parts}]\n' + chunk_text + f'\n[END PART {idx + 1}/{num_parts}]'
+            content += f'\nRemember not answering yet. Just acknowledge you received this part with the message "Part {idx + 1}/{num_parts} received" and wait for the next part.'
+        file_data.append({'name': f'split_{str(idx + 1).zfill(3)}_of_{str(num_parts).zfill(3)}.txt', 'content': content})
+
+    return file_data
 
 def generate_random_hash(length):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
