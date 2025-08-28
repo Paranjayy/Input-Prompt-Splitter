@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import axios from 'axios'
 import JSZip from 'jszip'
+import { get_encoding, encoding_for_model } from '@dqbd/tiktoken'
 
 type Unit = 'tokens' | 'chars' | 'words'
 type Boundary = 'none' | 'sentence' | 'paragraph'
@@ -67,7 +68,16 @@ function App() {
         const { data } = await axios.post('/api/count_tokens', { text, encoding }, { signal: controller.signal })
         setTokenCount(data.count ?? 0)
       } catch {
-        setTokenCount(0)
+        // Browser-side fallback tokenizer
+        try {
+          let enc
+          try { enc = encoding_for_model(encoding as any) } catch { enc = get_encoding(encoding) }
+          const tokens = enc.encode(text)
+          setTokenCount(tokens.length)
+          enc.free && enc.free()
+        } catch {
+          setTokenCount(0)
+        }
       }
     }
     run()
