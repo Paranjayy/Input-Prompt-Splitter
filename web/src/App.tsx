@@ -3,7 +3,7 @@ import './App.css'
 import axios from 'axios'
 import JSZip from 'jszip'
 
-type Unit = 'tokens' | 'chars'
+type Unit = 'tokens' | 'chars' | 'words'
 type Boundary = 'none' | 'sentence' | 'paragraph'
 type Preset = { id: string; name: string; size: number }
 type SessionRec = {
@@ -20,7 +20,7 @@ type SessionRec = {
 function App() {
   const [text, setText] = useState('')
   const [unit, setUnit] = useState<Unit>('tokens')
-  const [encoding, setEncoding] = useState('cl100k_base')
+  const [encoding, setEncoding] = useState('o200k_base')
   const [size, setSize] = useState(15000)
   const [tokenCount, setTokenCount] = useState(0)
   const [parts, setParts] = useState<{ name: string; content: string }[]>([])
@@ -77,7 +77,7 @@ function App() {
   const wordCount = useMemo(() => (text.trim() ? text.trim().split(/\s+/).length : 0), [text])
 
   const estimatedParts = useMemo(() => {
-    const n = unit === 'tokens' ? tokenCount : text.trim().length
+    const n = unit === 'tokens' ? tokenCount : unit === 'chars' ? text.trim().length : wordCount
     if (!n || !size) return 0
     return Math.ceil(n / Math.max(1, size))
   }, [unit, tokenCount, text, size])
@@ -173,25 +173,37 @@ function App() {
           </div>
 
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-            <label><input type="radio" checked={unit === 'chars'} onChange={() => setUnit('chars')} /> Characters</label>
-            <label><input type="radio" checked={unit === 'tokens'} onChange={() => setUnit('tokens')} /> Tokens</label>
-            <select value={encoding} onChange={(e) => setEncoding(e.target.value)} disabled={unit !== 'tokens'}>
-              <option value="cl100k_base">cl100k_base (GPT‑4/3.5)</option>
-              <option value="o200k_base">o200k_base (GPT‑4o)</option>
-            </select>
-            <select value={selectedPresetId} onChange={(e) => applyPreset(e.target.value)}>
-              <option value="">Preset: Custom</option>
-              {allPresets.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} ({p.size.toLocaleString()})</option>
-              ))}
-            </select>
-            <input type="number" value={size} onChange={(e) => { setSelectedPresetId(''); setSize(parseInt(e.target.value || '0', 10)) }} min={1} style={{ width: 120 }} />
-            <select value={boundary} onChange={(e) => setBoundary(e.target.value as Boundary)}>
-              <option value="none">Boundary: none</option>
-              <option value="sentence">Boundary: sentence</option>
-              <option value="paragraph">Boundary: paragraph</option>
-            </select>
-            <button disabled={!text.trim() || !size} onClick={doSplit}>Split</button>
+            <label title="Metric to base splitting on"><input type="radio" checked={unit === 'chars'} onChange={() => setUnit('chars')} /> Characters</label>
+            <label title="Recommended. Uses tokenizer to count input tokens"><input type="radio" checked={unit === 'tokens'} onChange={() => setUnit('tokens')} /> Tokens</label>
+            <label title="Tokenizer family (affects token counting)">
+              Tokenizer
+              <select value={encoding} onChange={(e) => setEncoding(e.target.value)} disabled={unit !== 'tokens'} style={{ marginLeft: 6 }}>
+                <option value="o200k_base">o200k_base (GPT‑4o family)</option>
+                <option value="cl100k_base">cl100k_base (GPT‑4/3.5 family)</option>
+              </select>
+            </label>
+            <label title="Pre-sized max tokens per part. You can still override below.">
+              Preset
+              <select value={selectedPresetId} onChange={(e) => applyPreset(e.target.value)} style={{ marginLeft: 6 }}>
+                <option value="">Custom</option>
+                {allPresets.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.size.toLocaleString()})</option>
+                ))}
+              </select>
+            </label>
+            <label title="Maximum size of a single part (characters or tokens)">
+              Max size
+              <input type="number" value={size} onChange={(e) => { setSelectedPresetId(''); setSize(parseInt(e.target.value || '0', 10)) }} min={1} style={{ width: 120, marginLeft: 6 }} />
+            </label>
+            <label title="Prefer cuts at sentence or paragraph ends">
+              Boundary
+              <select value={boundary} onChange={(e) => setBoundary(e.target.value as Boundary)} style={{ marginLeft: 6 }}>
+                <option value="none">none</option>
+                <option value="sentence">sentence</option>
+                <option value="paragraph">paragraph</option>
+              </select>
+            </label>
+            <button disabled={!text.trim() || !size} onClick={doSplit} title="Generate parts using the selected options">Split</button>
           </div>
 
           <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
