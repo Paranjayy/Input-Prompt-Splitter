@@ -1,0 +1,40 @@
+- 8da0545 2025-08-29 Paranjay: feat(tokens): add token counter, token-based splitting, encoding selector; add API endpoint and tests
+- 017961b 2023-05-09 JJDiaz: Bug: fixed by default was splitting to 1000
+- 575c0f3 2023-03-29 JJDiaz: Added Google Tag Manager
+- d3e7973 2023-03-26 JJDiaz: Added Medium post link
+- 35824f7 2023-03-20 JJDiaz: Change in subtitle
+- 761c8d1 2023-03-20 JJDiaz: Added link to Vercel
+- 38b1c6c 2023-03-20 JJDiaz: Added Redis (Upstash) & added logo powered by vercel
+- c8f159d 2023-03-20 JJDiaz: Updated footer and styles
+- 0c932cd 2023-03-19 JJDiaz: Scripts on external file
+- f23853e 2023-03-19 JJDiaz: Minor update
+- e919303 2023-03-19 JJDiaz: Added .editorconfig
+- d1f4215 2023-03-19 JJDiaz: Added responsive support
+- b0c758b 2023-03-19 JJDiaz: Minor updates
+- 8d56b60 2023-03-19 JJDiaz: Updated screenshot_example_paste_chunks.png
+- 79909a4 2023-03-18 JJDiaz: Ignored CSS content for the repository classification
+- 713e966 2023-03-18 JJDiaz: Updated OpenGraph image generation
+- 649b019 2023-03-18 JJDiaz: Updated index.html
+- cc67bfd 2023-03-18 JJDiaz: Added .gitattributes and updated README.md
+- 0f76bc9 2023-03-18 JJDiaz: Added og:image
+- 1e55ea8 2023-03-18 JJDiaz: Updated README.md and added screenshots
+- d609a17 2023-03-18 JJDiaz: Added favicon data
+- 06cfc7a 2023-03-18 JJDiaz: Added tests and updated README.md
+- ea5aff7 2023-03-17 JJDiaz: Updated config
+- b26867c 2023-03-17 JJDiaz: Updated config files
+- 6060a91 2023-03-17 JJDiaz: Updated config files
+- bbad926 2023-03-17 JJDiaz: Updated README.md
+- 8456596 2023-03-17 JJDiaz: Updated README.md
+- d7d26c9 2023-03-17 JJDiaz: Added Vercel deploy button
+- 37de975 2023-03-17 JJDiaz: Updated README.md
+- 1df140f 2023-03-17 JJDiaz: Updated structure for using Flask under Vercel
+- 7087a65 2023-03-16 JJDiaz: Updated files
+- cb91436 2023-03-16 JJDiaz: Updated app.py -> now index.py and created requirements.txt
+- d7030ef 2023-03-16 JJDiaz: Some fixes
+- cb41ccf 2023-03-16 JJDiaz: Updated README.md
+- c68b8fe 2023-03-16 JJDiaz: Created Logo
+- e66d7e7 2023-03-16 JJDiaz: Created CONTRIBUTING.md
+- 7015a9a 2023-03-16 JJDiaz: Updated README.md
+- ecd14b4 2023-03-16 JJDiaz: Created README.md
+- ec6f068 2023-03-16 JJDiaz: Initial commit
+- 91f0937 2023-03-16 Jose Diaz: Initial commit

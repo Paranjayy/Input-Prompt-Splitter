@@ -1,0 +1,261 @@
+body,
+html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: auto;
+    padding: 20px;
+}
+
+html {
+    height: 100%;
+}
+
+*,
+textarea,
+input {
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1,
+h2 {
+    text-align: center;
+    width: 100%;
+    margin: 0;
+}
+
+h1 {
+    font-size: 1rem;
+}
+
+h2 {
+    font-size: 11px;
+    font-weight: normal;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+textarea,
+input {
+    width: -webkit-fill-available;
+}
+
+textarea {
+    width: 100%;
+    height: 200px;
+    margin-bottom: 20px;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: #fff;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.copy-btn,
+.copy-instructions-btn {
+    padding: 10px;
+    border: none;
+    cursor: pointer;
+    color: white;
+    text-align: center;
+    font-size: 13px;
+}
+
+.copy-btn {
+    background-color: #4caf50;
+    flex-basis: min-content;
+    margin-bottom: 10px;
+}
+
+.copy-btn:hover {
+    background-color: #3e8e41;
+}
+
+.clicked {
+    background-color: #888;
+    color: #ccc;
+}
+
+.clicked:hover {
+    background-color: #666;
+}
+
+.copy-instructions-btn {
+    background-color: #FF8000;
+    margin-top: 10px;
+}
+
+.copy-instructions-btn:hover {
+    background-color: #CC6600;
+}
+
+.custom-length {
+    font-size: 14px;
+    width: 100px;
+    height: 24px;
+}
+
+select {
+    height: 24px;
+}
+
+.instructions {
+    margin-top: 20px;
+    font-size: 12px;
+    background-color: lightgray;
+    padding: 1px 10px 10px 10px;
+}
+
+help {
+    font-size: 12px;
+    color: #888;
+}
+
+button[disabled] {
+    background-color: #cccccc;
+    color: #666666;
+    cursor: not-allowed;
+}
+
+.char-count-container {
+    text-align: right;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.logo {
+    max-width: 90%;
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    width: 80%;
+}
+
+.header-logo {
+    width: 20%;
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 10px;
+}
+
+pre {
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-width: 100%;
+    padding: 1em;
+    background-color: #f8f8f8;
+    border-radius: 5px;
+}
+
+footer {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #ccc;
+    display: flex;
+    width: 100%;
+    bottom: 0;
+    font-size: 12px;
+}
+
+.left,
+.right {
+    width: 50%;
+}
+
+.left {
+    text-align: left;
+}
+
+.right {
+    text-align: right;
+}
+
+.powered-by-vercel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.powered-by-vercel img {
+    width: 180px;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.visits {
+    text-align:right;
+    font-size: 14px;
+}
+
+.how-this-works {
+    font-size: 14px;
+    text-align: center;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    textarea {
+        height: 300px;
+    }
+
+    h1 {
+        font-size: 2rem;
+        margin-bottom: 20px;
+    }
+
+    h2 {
+        font-size: 16px;
+        margin-bottom: 30px;
+    }
+}
